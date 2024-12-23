@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="description" content="Koopman">
+    <meta name="keywords" content="Continual Learning and Lifting, Koopman Operator, MPC">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Koopman</title>
+
+    <link
+      href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+      rel="stylesheet">
+
+    <link rel="stylesheet" href="./static/css/bulma.min.css">
+    <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+    <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+    <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+    <link rel="stylesheet" href="./static/css/index.css">
+
+    <script
+      src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script defer src="./static/js/fontawesome.all.min.js"></script>
+    <script src="./static/js/bulma-carousel.min.js"></script>
+    <script src="./static/js/bulma-slider.min.js"></script>
+    <script src="./static/js/index.js"></script>
+
+    <link rel="icon" href="./humanoid.ico">
+
+    <!-- facebook -->
+    <meta property="og:site_name" content="Incremental Koopman" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Incremental Koopman" />
+    <meta property="og:description" content="Continual Learning and Lifting of Koopman Dynamics" />
+    <meta property="og:url" content="https://intelligent-control-lab.github.io/Incremental-Koopman/" />
+    <meta property="og:image"content="https://intelligent-control-lab.github.io/Incremental-Koopman/static/images/preview.jpg" />
+    <meta property="og:image:secure"content="https://intelligent-control-lab.github.io/Incremental-Koopman/static/images/preview.jpg" />
+    <meta property="og:video"content="https://www.youtube.com/watch?v=TODO" />
+    <meta property="og:video:secure"content="https://www.youtube.com/watch?v=TODO" />
+    <meta property="og:image:width" content="1600" />
+    <meta property="og:image:height" content="900" />
+
+    <meta property="article:publisher" content="https://yifansun98.github.io" />
+
+    <!-- twitter -->
+    <!-- <meta name="twitter:label1" content="Written by" /> -->
+    <!-- <meta name="twitter:data1" content="Deepak Pathak" /> -->
+    <!-- <meta name="twitter:label2" content="Filed under" /> -->
+    <!-- <meta name="twitter:data2" content="" /> -->
+    <!-- <meta name="twitter:card" content="summary_large_image" /> -->
+    <!-- <meta name="twitter:image" content="" /> -->
+    <!-- <meta name="twitter:site" content="@pathak2206" /> -->
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <meta name="twitter:card" content="player" />
+    <meta name="twitter:title" content="Incremental Koopman" />
+    <meta name="twitter:description" content="Continual Learning and Lifting of Koopman Dynamics" />
+    <meta name="twitter:url" content="https://intelligent-control-lab.github.io/Incremental-Koopman/" />
+    <meta name="twitter:image" content="https://intelligent-control-lab.github.io/Incremental-Koopman/static/images/preview.jpg" />
+    <meta name="twitter:player" content="https://www.youtube.com/embed/TODO" />
+    <meta name="twitter:player:width" content="640" />
+    <meta name="twitter:player:height" content="360" />
+
+    <style>
+      .video-container {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border: none;
+      }
+    
+      .video-container iframe {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border: none;
+        border: 1px
+        solid #bbb;
+        border-radius: 10px;
+        width: 100%;
+      }
+
+      .image-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* Two columns */
+        gap: 20px; /* Space between rows and columns */
+        justify-items: center; /* Center the items horizontally */
+        align-items: center; /* Center the items vertically */
+      }
+      
+      .image-grid img {
+          max-width: 100%;
+          height: auto; /* Maintain aspect ratio */
+          border-radius: 10px; /* Optional: Add rounded corners */
+      }
+      
+    </style>
+
+  </head>
+  <body>
+
+    <section class="hero">
+      <div class="hero-body">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column has-text-centered">
+              <h1 class="title is-1 publication-title">Continual Learning and Lifting of Koopman dynamics
+                 <br />for Linear Control of Legged Robots</h1>
+              <div class="is-size-5 publication-authors">
+                <span class="author-block">
+                  <a href="mailto:feihanhanli@gmail.com">Feihan
+                    Li</a><sup>1</sup>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  <a href="mailto:abulikea@andrew.cmu.edu">Abulikemu
+                    Abuduweili</a><sup>1</sup>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  <a href="https://yifansun98.github.io">Yifan
+                    Sun</a><sup>1</sup>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  <a href="https://ruichen.pub/">Rui
+                    Chen</a><sup>1</sup>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  <a href="mailto:weiyezha@andrew.cmu.edu">Weiye
+                    Zhao</a><sup>1</sup>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  <a href="https://www.cs.cmu.edu/~cliu6/">Changliu
+                    Liu</a><sup>1</sup>
+                  <br /><sup>1</sup>Carnegie Mellon University
+                </span>
+              </div>
+
+              <div class="column has-text-centered">
+
+                <div class="publication-links">
+                  
+                  <!-- PDF Link. -->
+                  <span class="link-block">
+                    <a href="https://arxiv.org/abs/2411.14321"
+                      class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="fas fa-file-pdf" aria-hidden="true"></i>
+                      </span>
+                      <span>Arxiv</span>
+                    </a>
+                  </span>
+
+                  <!-- arXiv Link. -->
+                  <span class="link-block">
+                    <a href="https://arxiv.org/pdf/2411.14321"
+                      class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="ai ai-arxiv"></i>
+                      </span>
+                      <span>PDF</span>
+                    </a>
+                  </span>
+
+                  <!-- Video Link. -->
+                  <span class="link-block">
+                    <a href="https://www.youtube.com/watch?v=TODO"
+                      class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="fab fa-youtube" aria-hidden="true"></i>
+                      </span>
+                      <span>Video</span>
+                    </a>
+                  </span>
+
+                  <!-- Poster Link. -->
+                  <!-- <span class="link-block">
+                    <a href=""
+                       class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="far fa-file"></i>
+                      </span>
+                      <span>Poster</span>
+                    </a>
+                  </span> -->
+
+                  <!-- twitter Link. -->
+                  <!-- <span class="link-block">
+                    <a
+                      href="https://twitter.com/pathak2206/status/1706696237703901439?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E1706696237703901439%7Ctwgr%5E15e02108dbb696247a490e6499f2b18191e73a85%7Ctwcon%5Es1_c10&amp;ref_url=https%3A%2F%2Fpublish.twitter.com%2F%3Fquery%3Dhttps3A2F2Ftwitter.com2Fpathak22062Fstatus2F1706696237703901439widget%3DTweet"
+                      class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="fab fa-twitter" aria-hidden="true"></i>
+                      </span>
+                      <span>Summary</span>
+                    </a>
+                  </span> -->
+
+                  <!-- code Link. -->
+                  <!-- <span class="link-block">
+                    <a 
+                      class="external-link button is-normal is-rounded is-dark"
+                      target="_blank"
+                      disabled>
+                      <span class="icon">
+                        <i class="fab fa-github" aria-hidden="true"></i>
+                      </span>
+                      <span>Code (coming soon)</span>
+                    </a>
+                  </span> -->
+
+                  <!-- demo Link. -->
+                  <!-- <span class="link-block">
+                    <a href="#demo"
+                      class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="fa-solid fa-tower-broadcast"
+                          aria-hidden="true"></i>
+                      </span>
+                      <span>Live Demo CoRL 2023</span>
+                    </a>
+                  </span> -->
+
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Paper video. -->
+        <div id="method_video" class="columns is-centered has-text-centered">
+          <div class="column is-two-thirds">
+            <div class="video-container">
+              <iframe
+                src="https://www.youtube.com/embed/TODO"
+                title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen></iframe>
+            </div>
+          </div>
+        </div>
+        <!--/ Paper video. -->
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Abstract. -->
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-two-thirds">
+            <h2 class="title is-2">Abstract</h2>
+            <div class="content has-text-justified">
+              <p>
+                The control of legged robots, particularly humanoid and quadruped robots, presents significant challenges due to their
+                high-dimensional and nonlinear dynamics. While linear systems can be effectively controlled using methods like Model
+                Predictive Control (MPC), the control of nonlinear systems remains complex. One promising solution is the Koopman
+                Operator, which approximates nonlinear dynamics with a linear model, enabling the use of proven linear control
+                techniques. However, achieving accurate linearization through data-driven methods is difficult due to issues like
+                approximation error, domain shifts, and the limitations of fixed linear state-space representations. These challenges
+                restrict the scalability of Koopman-based approaches. This paper addresses these challenges by proposing Incremental
+                Koopman algorithm designed to iteratively refine Koopman dynamics for high-dimensional legged robots. The key idea is to
+                progressively expand the dataset and latent space dimension, enabling the learned Koopman dynamics to converge towards
+                accurate approximations of the true system dynamics. Theoretical analysis shows that the linear approximation error of
+                our method converges monotonically. Experimental results demonstrate that our method achieves high control performance
+                on robots like Unitree G1, H1, A1, Go2 and ANYmal D, across various terrains using simple linear MPC controllers. This
+                work is the first to successfully apply linearized Koopman dynamics for locomotion control of high-dimensional legged
+                robots, enabling a scalable model-based control solution.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <!--/ Abstract. -->
+
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-full-width">
+            
+            <!-- actual content -->
+
+            <h2 class="title is-2" style="text-align: center;">
+              Tracking Performance for Five Tested Legged Robots
+            </h2>
+            <tr>
+              <td>
+
+                <style>
+                  .image-grid-3 {
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: space-between;
+                  }
+                
+                  .video-container-3 {
+                    width: 32%;
+                    /* 每个视频容器宽度大约占三分之一 */
+                    margin-bottom: 20px;
+                    /* 设置每个视频之间的间距 */
+                  }
+                
+                  .video-description-3 {
+                    text-align: center;
+                    /* 视频描述居中 */
+                    margin-top: 10px;
+                    /* 给描述留些空隙 */
+                  }
+                </style>
+                
+                <div class="image-grid-3">
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/g1/y_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/g1/xyz_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/g1/z_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div><div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/h1/y_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/h1/xyz_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/h1/z_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div><div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/go2/y_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/go2/xyz_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/go2/z_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div><div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/a1/y_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/a1/xyz_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/a1/z_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div><div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/anymal-D/y_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/anymal-D/xyz_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                  <div class="video-container-3">
+                    <video autoplay loop muted playsinline src="./resources/video/anymal-D/z_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                  </div>
+                </div>
+
+
+
+              </td>
+            </tr>
+            
+            <!--  -->
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-full-width">
+            
+            <!-- actual content -->
+
+            <h2 class="title is-2" style="text-align: center;">
+              Dynamic Reference Tracking with Safe Control
+            </h2>
+            <h3 style="text-align: center; font-style: italic; font-size: 1.25rem;">
+              (References on the left; Tracking results on the right.)
+            </h3>
+            <br>
+
+            <tr>
+              <td>
+
+                <style>
+                  .image-grid-4 {
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: space-between;
+                  }
+                
+                  .video-container-4 {
+                    width: 49%;
+                    /* 每个视频容器宽度大约占二分之一 */
+                    margin-bottom: 20px;
+                    /* 设置每个视频之间的间距 */
+                  }
+                
+                  .video-description-4 {
+                    text-align: center;
+                    /* 视频描述居中 */
+                    margin-top: 10px;
+                    /* 给描述留些空隙 */
+                  }
+                </style>
+
+                <div class="image-grid-4">
+                  <div class="video-container-4">
+                    <video autoplay loop muted playsinline src="./resources/video/g1/xvel_0.3_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                    <div class="video-description-4">G1: X-axis Velocity 0.3 m/s</div>
+                  </div>
+                  <div class="video-container-4">
+                    <video autoplay loop muted playsinline src="./resources/video/g1/xvel_0.5_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                    <div class="video-description-4">G1: X-axis Velocity 0.5 m/s</div>
+                  </div>
+                  <div class="video-container-4">
+                    <video autoplay loop muted playsinline src="./resources/video/g1/xvel_0.7_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                    <div class="video-description-4">G1: X-axis Velocity 0.7 m/s</div>
+                  </div>
+                  <div class="video-container-4">
+                    <video autoplay loop muted playsinline src="./resources/video/g1/yvel_0.2_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                    <div class="video-description-4">G1: Y-axis Velocity 0.2 m/s</div>
+                  </div><div class="video-container-4">
+                    <video autoplay loop muted playsinline src="./resources/video/go2/xvel_0.5_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                    <div class="video-description-4">Go2: X-axis Velocity 0.5 m/s</div>
+                  </div>
+                  <div class="video-container-4">
+                    <video autoplay loop muted playsinline src="./resources/video/go2/xvel_-0.5_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                    <div class="video-description-4">Go2: X-axis Velocity -0.5 m/s</div>
+                  </div>
+                  <div class="video-container-4">
+                    <video autoplay loop muted playsinline src="./resources/video/go2/xvel_0.9_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                    <div class="video-description-4">Go2: X-axis Velocity 0.9 m/s</div>
+                  </div>
+                  <div class="video-container-4">
+                    <video autoplay loop muted playsinline src="./resources/video/go2/yvel_0.5_low.mp4"
+                      style="border: 1px solid #bbb; border-radius: 10px; width: 100%;"></video>
+                    <div class="video-description-4">Go2: Y-axis Velocity 0.5 m/s</div>
+                  </div>
+                </div>
+
+              </td>
+            </tr>
+            
+            <!--  -->
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-full-width">
+            
+            <!-- actual content -->
+
+            <h2 class="title is-2" style="text-align: center;">
+              Incremental Koopman Algorithm Framework
+            </h2>
+            <br>
+            <center>
+              <img src="./resources/algo_overview.png" alt="Overview" style="width:90%"/>
+            </center>
+
+            <!-- <tr>
+              <td>
+                  <img src="./resources/algo_overview.png" alt="Overview" />
+              </td>
+            </tr> -->
+            
+            <!--  -->
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="BibTeX">
+      <div class="container content">
+        <h2 class="titile">BibTeX</h2>
+        <pre>
+          <code>
+            @misc{li2024continuallearningliftingkoopman,
+              title         = {Continual Learning and Lifting of Koopman Dynamics for Linear Control of Legged Robots},
+              author        = {Feihan Li and Abulikemu Abuduweili and Yifan Sun and Rui Chen and Weiye Zhao and Changliu Liu},
+              year          = {2024},
+              eprint        = {2411.14321},
+              archivePrefix = {arXiv},
+              primaryClass  = {cs.RO},
+              url           = {https://arxiv.org/abs/2411.14321},
+            }
+          </code>
+        </pre>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="content has-text-centered">
+
+          <br />
+
+          <p>Page template borrowed from <a
+              href="https://worldsheet.github.io/"><span
+                class="dnerf">Worldsheet</span></a> and <a
+              href="https://nerfies.github.io/"><span
+                class="dnerf">Nerfies</span></a>.</p>
+        </div>
+      </div>
+    </footer>
+
+  </body>
+</html>
