@@ -94,7 +94,7 @@ fi
 if ! ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/initial_data_generator.py \
               --headless --video --task "$TASK_ISAAC_PLAY" \
               --load_run "$TRAIN_LOG" \
-              --max_iterations 20 --num_envs 30 --max_episode_len 100 \
+              --max_iterations 20 --num_envs 3000 --max_episode_len 100 \
               --collect_data \
               --data_dir "$DATA_DIR"/"$TASK"/initial_dataset/; then
     echo -e "\e[1;31m[Error]\e[0m Failed to generate initial dataset."
@@ -112,7 +112,7 @@ fi
 if ! ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/initial_data_generator.py \
               --headless --video --task "$TASK_ISAAC_PLAY" \
               --load_run "$TRAIN_LOG" \
-              --max_iterations 1 --num_envs 30 --max_episode_len 500 \
+              --max_iterations 1 --num_envs 3000 --max_episode_len 500 \
               --collect_data \
               --data_dir "$DATA_DIR"/"$TASK"/reference_repository/ \
               --noise_scale 0.05; then
