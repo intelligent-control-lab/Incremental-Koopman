@@ -58,6 +58,7 @@ import os
 import torch
 from datetime import datetime
 from tqdm import tqdm
+import re
 
 from rsl_rl.runners import OnPolicyRunner
 
@@ -205,7 +206,12 @@ def main():
         data_dir = args_cli.data_dir if args_cli.data_dir else log_dir
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
-        np.savez(os.path.join(data_dir, f"{args_cli.load_run}_trajnum{data['action_data'].shape[1]}_trajlen{env.max_episode_length}.npz"), **data)
+
+        def extract_datetime_from_path(path):
+            pattern = r"\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}"
+            match = re.search(pattern, path)
+            return match.group() if match else None
+        np.savez(os.path.join(data_dir, f"{extract_datetime_from_path(args_cli.load_run)}_trajnum{data['action_data'].shape[1]}_trajlen{env.max_episode_length}.npz"), **data)
 
     # close the simulator
     env.close()

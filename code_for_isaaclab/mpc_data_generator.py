@@ -17,18 +17,17 @@ import cli_args  # isort: skip
 # add argparse arguments
 parser = argparse.ArgumentParser(description="MPC data generator")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
-parser.add_argument("--video_length", type=int, default=2000, help="Length of the recorded video (in steps).")
-parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
+parser.add_argument("--video_length", type=int, default=None, help="Length of the recorded video (in steps).")
+parser.add_argument("--video_interval", type=int, default=None, help="Interval between video recordings (in steps).")
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
-parser.add_argument("--num_envs", type=int, default=3000, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default="Isaac-Velocity-Flat-G1-Play-v0", help="Name of the task.")
 
 parser.add_argument("--start_idx", type=int, default=20, help="Start step for MPC to avoid initial floating situation")
 parser.add_argument("--num_steps_per_env", type=int, default=200, help="RL Policy update interval")
 parser.add_argument("--ref", type=str, help="Reference respository")
-parser.add_argument("--noise_scale", type=float, default=0.05)
+parser.add_argument("--data_dir", type=str, default=None, help="Data save directory.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -53,6 +52,7 @@ from datetime import datetime
 from tqdm import tqdm
 from collections import OrderedDict
 import yaml
+import re
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab.utils.dict import print_dict
@@ -72,7 +72,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() and not args_cli.cpu
 ref_data: dict
 x_ref: torch.Tensor
 shift_step: int = 3
-shift_buf = torch.zeros(args_cli.num_envs).int().to(device) - shift_step
+num_envs = int(args_cli.ref.split("trajnum")[1].split("_")[0])
+shift_buf = torch.zeros(num_envs).int().to(device) - shift_step
 robot: str
 
 def reset_root_state_specific(
@@ -93,10 +94,7 @@ def reset_root_state_specific(
 
     root_states = ref_data["state_data"][shift_buf, torch.arange(shift_buf.shape[0])%ref_num][env_ids, -13:]
 
-    if "Rough" in args_cli.task:
-        positions = root_states[:, :3]
-    else:
-        positions = torch.cat([env.scene.env_origins[env_ids][:, :2], root_states[:, 2:3]], dim=-1)
+    positions = torch.cat([env.scene.env_origins[env_ids][:, :2], root_states[:, 2:3]], dim=-1)
     orientations = root_states[:, 3:7]
     velocities = root_states[:, 7:13]
 
@@ -189,9 +187,8 @@ def Torch_MPC(net, x_k, X_ref, H, m, n, device, robot):
     R = torch.eye(m).to(device).double() * 0.0
     F = torch.eye(n).to(device).double()
 
-    if "rough" not in robot:
-        Q[net.s_dim:, net.s_dim:] *= 0.0
-        F[net.s_dim:, net.s_dim:] *= 0.0
+    Q[net.s_dim:, net.s_dim:] *= 0.0
+    F[net.s_dim:, net.s_dim:] *= 0.0
 
     M = torch.cat([torch.matrix_power(A, i) for i in range(H+1)], dim=0).to(device).double()
     C = torch.zeros((H+1)*n, H*m)
@@ -216,11 +213,11 @@ def Torch_MPC(net, x_k, X_ref, H, m, n, device, robot):
     return u_k, res
 
 def main():
-    global ref_data, x_ref, shift_buf
+    global ref_data, x_ref, shift_buf, num_envs
 
     # parse configuration
     env_cfg = parse_env_cfg(
-        args_cli.task, use_gpu=not args_cli.cpu, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
+        args_cli.task, device=args_cli.device, num_envs=num_envs, use_fabric=not args_cli.disable_fabric
     )
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
@@ -237,8 +234,6 @@ def main():
         robot = "anymal-D"
     else:
         assert False, "Robot not supported."
-    if "rough" in agent_cfg.experiment_name:
-        robot += "_rough"
     
     # shut down the randomization of robot pose and velocity
     env_cfg.events.reset_base.params = {
@@ -270,9 +265,7 @@ def main():
     log_root_path = os.path.abspath(log_root_path)
 
     """Define Koopman dynamics as follow."""
-    koop_root_path = os.path.join("logs", "rsl_rl", "koopman", robot)
-    koop_root_path = os.path.abspath(koop_root_path)
-    resume_path = os.path.join(koop_root_path, args_cli.load_run, "checkpoint")
+    resume_path = os.path.join(args_cli.load_run, "checkpoint")
     last_checkpoint = "model"+str(max([int(i.split("model")[1].split(".pt")[0]) for i in os.listdir(resume_path)]))+".pt"
     if args_cli.checkpoint:
         resume_path = os.path.join(resume_path, args_cli.checkpoint)
@@ -295,8 +288,7 @@ def main():
     net.eval()
 
     # load reference trajectory and global variables
-    ref_path = os.path.join(koop_root_path, args_cli.ref)
-    ref_data = np.load(ref_path, allow_pickle=True)
+    ref_data = np.load(args_cli.ref, allow_pickle=True)
     state_data = torch.DoubleTensor(ref_data["state_data"]).to(device)[args_cli.start_idx:, ...]
     action_data = torch.DoubleTensor(ref_data["action_data"]).to(device)[args_cli.start_idx:, ...]
     ref_data = OrderedDict({"state_data": state_data, "action_data": action_data})
@@ -347,11 +339,12 @@ def main():
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)
+    scene = env.unwrapped.scene
 
     def get_obs():
-        dof_pos = env.env.scene['robot'].data.joint_pos
-        dof_vel = env.env.scene['robot'].data.joint_vel
-        root_state = env.env.scene['robot'].data.root_state_w
+        dof_pos = scene['robot'].data.joint_pos
+        dof_vel = scene['robot'].data.joint_vel
+        root_state = scene['robot'].data.root_state_w
         states = torch.cat([dof_pos, dof_vel, root_state], axis=-1)
         if "g1" in robot:
             states = torch.cat([states[..., :23], states[..., 37:60], states[..., 76:77], states[..., 81:]], axis=-1)
@@ -369,10 +362,8 @@ def main():
     }
     state_data_buffer = [[] for _ in range(env.num_envs)]
     action_data_buffer = [[] for _ in range(env.num_envs)]
-
-    flag = [False for _ in range(env.num_envs)]
     
-    max_len = x_ref.shape[0] - traj_len - 1 - 10 # 10 is reserved for shift_buf effect
+    max_len = x_ref.shape[0] - traj_len - 1 - 10 # 10 is reserved for shift_step <= 10
     num_steps = args_cli.num_steps_per_env if args_cli.num_steps_per_env <= max_len else max_len
     ref_num = x_ref.shape[1]
     data_num = 30000
@@ -380,49 +371,42 @@ def main():
     obs = get_obs()
     with torch.inference_mode():
         for i in tqdm(range(num_steps)):
-            dof_pos = env.env.scene['robot'].data.joint_pos
-            dof_vel = env.env.scene['robot'].data.joint_vel
-            root_state = env.env.scene['robot'].data.root_state_w
+            dof_pos = scene['robot'].data.joint_pos
+            dof_vel = scene['robot'].data.joint_vel
+            root_state = scene['robot'].data.root_state_w
             state = torch.cat([dof_pos, dof_vel, root_state], axis=1)
             for j in range(env.num_envs):
                 if env.episode_length_buf[j] == 0:
                     # x, y don't follow ref_data
                     assert torch.abs(state[j, :-13] - ref_data["state_data"][shift_buf[j], j%ref_num, :-13]).mean() == 0.0, f"State mismatch: {j}, {shift_buf[j]}"
                     assert torch.abs(state[j, -11:] - ref_data["state_data"][shift_buf[j], j%ref_num, -11:]).mean() == 0.0, f"State mismatch: {j}, {shift_buf[j]}"
-                if flag[j] and len(state_data_buffer[j]) == 0:
+                if len(state_data_buffer[j]) == 0:
                     state_data_buffer[j].append(state[j, :])
 
             range_matrix = (env.episode_length_buf+shift_buf).unsqueeze(0) + torch.arange(traj_len+1).unsqueeze(1).to(device)
             sliced_x_ref = x_ref[range_matrix, (torch.arange(env.episode_length_buf.shape[0])%ref_num).unsqueeze(0)]
-            sliced_x_ref += (torch.rand_like(sliced_x_ref)-0.5)*2 * args_cli.noise_scale
-            
+
             actions, _ = Torch_MPC(net, obs, sliced_x_ref, traj_len, u_dim, N_koopman, device, robot)
             actions = actions.clamp(action_l, action_u)
             actions = torch.cat([actions, torch.zeros(env.num_envs, ref_data["action_data"].shape[-1] - u_ref.shape[-1]).to(device)], axis=-1)
             _, _, dones, _ = env.step(actions)
             obs = get_obs()
 
-            dof_pos = env.env.scene['robot'].data.joint_pos
-            dof_vel = env.env.scene['robot'].data.joint_vel
-            root_state = env.env.scene['robot'].data.root_state_w
+            dof_pos = scene['robot'].data.joint_pos
+            dof_vel = scene['robot'].data.joint_vel
+            root_state = scene['robot'].data.root_state_w
             state = torch.cat([dof_pos, dof_vel, root_state], axis=1)
             for j in range(env.num_envs):
-                if flag[j]:
-                    state_data_buffer[j].append(state[j, :])
-                    action_data_buffer[j].append(actions[j, :])
-                    if dones[j] == 1 or i == num_steps-1:
-                        state_data_buffer[j] = state_data_buffer[j][:-1]
-                        action_data_buffer[j] = action_data_buffer[j][:-1]
-                        if len(action_data_buffer[j]) > 0:
-                            data["state_data"].append(torch.stack(state_data_buffer[j], dim=0))
-                            data["action_data"].append(torch.stack(action_data_buffer[j], dim=0))
-                        state_data_buffer[j] = []
-                        action_data_buffer[j] = []
-
-                        flag[j] = False
-
-                if flag[j] == False:
-                    flag[j] = True
+                state_data_buffer[j].append(state[j, :])
+                action_data_buffer[j].append(actions[j, :])
+                if dones[j] == 1 or i == num_steps-1:
+                    state_data_buffer[j] = state_data_buffer[j][:-1]
+                    action_data_buffer[j] = action_data_buffer[j][:-1]
+                    if len(action_data_buffer[j]) > 0:
+                        data["state_data"].append(torch.stack(state_data_buffer[j], dim=0))
+                        data["action_data"].append(torch.stack(action_data_buffer[j], dim=0))
+                    state_data_buffer[j] = []
+                    action_data_buffer[j] = []
 
     # check data shape
     remove_list = []
@@ -448,7 +432,14 @@ def main():
     new_data["state_data"] = torch.stack(new_data["state_data"], dim=0).transpose(0, 1).cpu().numpy()
     new_data["action_data"] = torch.stack(new_data["action_data"], dim=0).transpose(0, 1).cpu().numpy()
     print(f"[INFO]: State Date Shape: {new_data['state_data'].shape}  Action Data Shape: {new_data['action_data'].shape}")
-    np.savez(os.path.join(log_dir, f"koopmanlog{args_cli.load_run}_trajnum{new_data['action_data'].shape[1]}_trajlen{new_data['action_data'].shape[0]}.npz"), **new_data)
+    if not os.path.exists(args_cli.data_dir):
+        os.makedirs(args_cli.data_dir)
+
+    def extract_datetime_from_path(path):
+        pattern = r"\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}"
+        match = re.search(pattern, path)
+        return match.group() if match else None
+    np.savez(os.path.join(args_cli.data_dir, f"{extract_datetime_from_path(args_cli.load_run)}_trajnum{new_data['action_data'].shape[1]}_trajlen{new_data['action_data'].shape[0]}.npz"), **new_data)
 
     # close the simulator
     env.close()
